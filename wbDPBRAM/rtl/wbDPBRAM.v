@@ -1,5 +1,5 @@
 // =============================================================================
-// File        : wbwbDPBRAM.v
+// File        : wbDPBRAM.v
 // Author      : @fjpolo
 // email       : fjpolo@gmail.com
 // Description : <Brief description of the module or file>
