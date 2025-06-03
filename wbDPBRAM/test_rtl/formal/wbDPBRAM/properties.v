@@ -57,6 +57,14 @@
 	// BMC
 	//
 	////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////
+	//
+	// Contract
+	//
+	////////////////////////////////////////////////////   
+
+	/* Every valid write to BRAM must hold */
 	(* anyconst *)	wire	[(ADDR_WIDTH-1):0]	f_addr;
 	reg	[(DATA_WIDTH)-1:0]	f_expected_data_at_f_addr;
 	always @(posedge i_clk)
@@ -67,11 +75,16 @@
 		if((f_past_valid)&&(($past(f_past_valid))&&($past(i_enA))&&($past(i_weA))&&($past(i_addrA) == $past(f_addr))))
 			assert(ram[$past(f_addr)] == f_expected_data_at_f_addr);
 
-    ////////////////////////////////////////////////////
-	//
-	// Contract
-	//
-	////////////////////////////////////////////////////   
+	/* Every write to RAM followed by a read to the same address must hold */
+	// Verify read after write
+	always @(posedge i_clk)
+		if(
+			(f_past_valid)&&($past(f_past_valid))&&($past(f_past_valid, 2))
+			&&(!$past(i_enA)&&(!$past(i_weA)))
+			&&($past(i_enB))&&($past(f_addr,2) == $past(f_addr))&&($past(i_addrB) == $past(f_addr))
+		) begin
+			assert(o_doutB == $past(ram[f_addr]));
+		end
 
     ////////////////////////////////////////////////////
 	//
