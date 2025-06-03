@@ -34,12 +34,14 @@ module wbDPBRAM #(
   parameter MEM_DEPTH  = (1 << ADDR_WIDTH) // Calculate memory depth from address width
 ) (
     input   wire  [0:0]               i_clk,
+    // Port A
     input   wire  [0:0]               i_enA,
-    input   wire  [0:0]               i_enB,
     input   wire  [0:0]               i_weA,
     input   wire  [(ADDR_WIDTH-1):0]  i_addrA,
-    input   wire  [(ADDR_WIDTH-1):0]  i_addrB,
     input   reg   [(DATA_WIDTH-1):0]  i_dinA,
+    // Port B
+    input   wire  [0:0]               i_enB,
+    input   wire  [(ADDR_WIDTH-1):0]  i_addrB,
     output  reg   [(DATA_WIDTH-1):0]  o_doutB
     );
 

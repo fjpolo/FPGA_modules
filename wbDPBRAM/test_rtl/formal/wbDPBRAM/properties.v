@@ -57,6 +57,15 @@
 	// BMC
 	//
 	////////////////////////////////////////////////////
+	(* anyconst *)	wire	[(ADDR_WIDTH-1):0]	f_addr;
+	reg	[(DATA_WIDTH)-1:0]	f_expected_data_at_f_addr;
+	always @(posedge i_clk)
+		if ((i_enA)&&(i_weA)&&(i_addrA == f_addr))
+			f_expected_data_at_f_addr <= i_dinA;
+	// Verify write
+	always @(posedge i_clk)
+		if((f_past_valid)&&(($past(f_past_valid))&&($past(i_enA))&&($past(i_weA))&&($past(i_addrA) == $past(f_addr))))
+			assert(ram[$past(f_addr)] == f_expected_data_at_f_addr);
 
     ////////////////////////////////////////////////////
 	//
@@ -74,7 +83,11 @@
 	//
 	// Cover
 	//
-	////////////////////////////////////////////////////     
-           
+	////////////////////////////////////////////////////   
+
+	always @(posedge i_clk) begin
+		if((f_past_valid)&&(o_doutB != 0))
+			cover(o_doutB == $past(ram[i_addrB]));
+	end  
 `endif
 
