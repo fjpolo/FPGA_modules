@@ -91,6 +91,13 @@ module wbDPBRAM #(
   output wire   [DATA_WIDTH-1:0]  o_doutB
 );
 
+  //  Logic to avoid that portA and portB write to the same 
+  // address at the same time
+  wire address_is_the_same = (i_addr_A == i_addrB);
+  wire write_is_the_same = (i_weA == i_weB);
+  wire enable_is_the_same = (i_enA == i_enB);
+  wire same_address_write  = ((address_is_the_same)&&(write_is_the_same)&&(enable_is_the_same));
+
   // Internal memory array
   // The memory is declared as a register array, indexed by address.
   reg [DATA_WIDTH-1:0] mem [0:MEM_DEPTH-1];
@@ -126,7 +133,7 @@ module wbDPBRAM #(
   always @(posedge i_clk) begin
     if(i_reset_n) begin
       if (i_enB) begin // Only operate if Port B is enabled
-        if (i_weB) begin // Write operation for Port B
+        if ((i_weB)&&(!same_address_write)) begin // Write operation for Port B if Port A is not writing at the same address at the same time
           // Write data to memory at the specified address
           mem[i_addrB] <= i_dinB;
           // Read-before-write behavior for Port B
