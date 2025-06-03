@@ -25,125 +25,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // =============================================================================
-//
-// wbDPBRAM - Double Port Block RAM (SDR)
-//
-// This module implements a synchronous dual-port block RAM that can be configured
-// using parameters for data width, address width, and memory depth.
-// Each port operates independently with its own clock, enable, write enable,
-// address, data in, and data out signals.
-//
-// This version operates in a Single Data Rate (SDR) fashion,
-// meaning it will perform read/write operations only on the positive edge
-// of the respective port clocks.
-//
-// Parameters:
-//   DATA_WIDTH: Specifies the width of the data bus in bits.
-//   ADDR_WIDTH: Specifies the width of the address bus in bits.
-//               The memory depth will be 2^ADDR_WIDTH.
-//   MEM_DEPTH:  Specifies the total number of memory locations.
-//               This parameter is derived from ADDR_WIDTH, but can be
-//               overridden if a specific depth is required (though ADDR_WIDTH
-//               should then be adjusted accordingly for correct addressing).
-//               For simplicity, it's calculated as (1 << ADDR_WIDTH).
-//
-// Ports:
-//   input                   i_clk,     // Clock for Port A and port B (SDR operation)
-//   input                   i_reset_n, // Reset active low
-//
-//   // Port A
-//   input                   i_enA,     // Enable for Port A (active high)
-//   input                   i_weA,     // Write Enable for Port A (active high)
-//   input  [ADDR_WIDTH-1:0] i_addr_A,   // Address input for Port A
-//   input  [DATA_WIDTH-1:0] i_dinA,    // Data input for Port A (write data)
-//   output [DATA_WIDTH-1:0] o_doutA,   // Data output for Port A (read data)
-//
-//   // Port B
-//   input                   i_enB,     // Enable for Port B (active high)
-//   input                   i_weB,     // Write Enable for Port B (active high)
-//   input  [ADDR_WIDTH-1:0] i_addrB,   // Address input for Port B
-//   input  [DATA_WIDTH-1:0] i_dinB,    // Data input for Port B (write data)
-//   output [DATA_WIDTH-1:0] o_doutB    // Data output for Port B (read data)
-//
 `default_nettype none
 `timescale 1ps/1ps
 
 module wbDPBRAM #(
-  parameter DATA_WIDTH = 8,
-  parameter ADDR_WIDTH = 10,
+  parameter DATA_WIDTH = 32,
+  parameter ADDR_WIDTH = 1024,
   parameter MEM_DEPTH  = (1 << ADDR_WIDTH) // Calculate memory depth from address width
 ) (
-  input wire    [0:0]             i_clk,
-  input wire    [0:0]             i_reset_n,
+    input   wire  [0:0]               i_clk,
+    input   wire  [0:0]               i_enA,
+    input   wire  [0:0]               i_enB,
+    input   wire  [0:0]               i_weA,
+    input   wire  [(ADDR_WIDTH-1):0]  i_addrA,
+    input   wire  [(ADDR_WIDTH-1):0]  i_addrB,
+    input   reg   [(DATA_WIDTH-1):0]  i_dinA,
+    output  reg   [(DATA_WIDTH-1):0]  o_doutB
+    );
 
-  // Port A
-  input   wire  [0:0]             i_enA,
-  input   wire  [0:0]             i_weA,
-  input   wire  [ADDR_WIDTH-1:0]  i_addr_A,
-  input   wire  [DATA_WIDTH-1:0]  i_dinA,
-  output  wire  [DATA_WIDTH-1:0]  o_doutA,
+reg [(DATA_WIDTH-1):0] ram [(MEM_DEPTH-1):0];
 
-  // Port B
-  input   wire  [0:0]             i_enB,
-  input   wire  [0:0]             i_weB,
-  input   wire  [ADDR_WIDTH-1:0]  i_addrB,
-  input  wire   [DATA_WIDTH-1:0]  i_dinB,
-  output wire   [DATA_WIDTH-1:0]  o_doutB
-);
-
-  //  Logic to avoid that portA and portB write to the same 
-  // address at the same time
-  wire address_is_the_same = (i_addr_A == i_addrB);
-  wire write_is_the_same = (i_weA == i_weB);
-  wire enable_is_the_same = (i_enA == i_enB);
-  wire same_address_write  = ((address_is_the_same)&&(write_is_the_same)&&(enable_is_the_same));
-
-  // Internal memory array
-  // The memory is declared as a register array, indexed by address.
-  reg [DATA_WIDTH-1:0] mem [0:MEM_DEPTH-1];
-
-  // Registers to hold the output data for each port
-  // This is crucial for synchronous read behavior, where data is available
-  // on the next clock cycle after the address is provided.
-  reg [DATA_WIDTH-1:0] doutA_reg;
-  reg [DATA_WIDTH-1:0] doutB_reg;
-
-  // Assign the internal output registers to the module outputs
-  assign o_doutA = doutA_reg;
-  assign o_doutB = doutB_reg;
-
-  // Port A Read/Write Logic - Operates only on positive clock edge
-  always @(posedge i_clk) begin
-    if(i_reset_n) begin
-      if (i_enA) begin // Only operate if Port A is enabled
-        if (i_weA) begin // Write operation for Port A
-          // Write data to memory at the specified address
-          mem[i_addr_A] <= i_dinA;
-          // Read-before-write behavior
-          doutA_reg <= mem[i_addr_A];
-        end else begin // Read operation for Port A
-          // Read data from memory at the specified address
-          doutA_reg <= mem[i_addr_A];
-        end
-      end
+always @(posedge i_clk) begin
+  if (i_enA) begin
+    if (i_weA) begin
+      ram[i_addrA] <= i_dinA;
     end
   end
+end
 
-  // Port B Read/Write Logic - Operates only on positive clock edge
-  always @(posedge i_clk) begin
-    if(i_reset_n) begin
-      if (i_enB) begin // Only operate if Port B is enabled
-        if ((i_weB)&&(!same_address_write)) begin // Write operation for Port B if Port A is not writing at the same address at the same time
-          // Write data to memory at the specified address
-          mem[i_addrB] <= i_dinB;
-          // Read-before-write behavior for Port B
-          doutB_reg <= mem[i_addrB];
-        end else begin // Read operation for Port B
-          // Read data from memory at the specified address
-          doutB_reg <= mem[i_addrB];
-        end
-      end
-    end
+always @(posedge i_clk) begin
+  if (i_enB) begin
+    o_doutB <= ram[i_addrB];
   end
+end
 
 endmodule
