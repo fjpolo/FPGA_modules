@@ -30,7 +30,7 @@
 
 module wbDPBRAM #(
   parameter DATA_WIDTH = 32,
-  parameter ADDR_WIDTH = 1024,
+  parameter ADDR_WIDTH = 10,
   parameter MEM_DEPTH  = (1 << ADDR_WIDTH) // Calculate memory depth from address width
 ) (
     input   wire  [0:0]               i_clk,
@@ -43,7 +43,7 @@ module wbDPBRAM #(
     output  reg   [(DATA_WIDTH-1):0]  o_doutB
     );
 
-reg [(DATA_WIDTH-1):0] ram [(MEM_DEPTH-1):0];
+reg [(DATA_WIDTH-1):0] ram[(MEM_DEPTH-1):0];
 
 always @(posedge i_clk) begin
   if (i_enA) begin
