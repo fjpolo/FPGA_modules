@@ -1,0 +1,6 @@
+*.vcd
+*.v
+*.il
+wbTDPBRAM/
+wbTDPBRAM_bmc/
+wbTDPBRAM_cover/
