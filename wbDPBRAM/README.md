@@ -26,6 +26,7 @@ Database contains 390 cached "FAIL" results for "test_sim".
 Database contains 360 cached "PASS" results for "test_sim".
 Tagged 750 mutations as "COVERED".
 Tagged 360 mutations as "FMONLY".
+Coverage: 100.00%
 ```
 
 ## Usage
