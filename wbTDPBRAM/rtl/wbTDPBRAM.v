@@ -48,7 +48,7 @@ module wbTDPBRAM#(
                 );
 reg [(DATA_WIDTH-1):0] ram [(MEM_DEPTH-1):0];
 
-always @(posedge i_clkA)begin
+always @(posedge i_clkA) begin
     if (i_enA) begin
         if (i_weA)
             ram[i_addrA] <= i_dinA;
