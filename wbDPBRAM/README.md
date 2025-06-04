@@ -10,6 +10,24 @@ This Verilog module implements a **Double Port Block RAM (DPBRAM)**. It features
 * **Dedicated Read Port (Port B):** Allows data to be read from the RAM. It includes enable (`i_enB`), address (`i_addrB`), and data output (`o_doutB`) signals.
 * **MIT License:** Freely usable and modifiable under the terms of the MIT License.
 
+## Validation
+
+This module uses [`icarus verilog`](https://github.com/steveicarus/iverilog), [`symbiyosys`](https://github.com/YosysHQ/sby), [`equivalence checking wiht yosys`](https://github.com/YosysHQ/eqy) and [`mutation cover with yosys`](https://github.com/YosysHQ/mcy) to get a `100% mutation test coverage`!
+
+With a mixture of simulation and formal verification, it's ensured that the 750 mutations tested are detected either by the testbench, equivalence checking or formal properties. A whitebox testing approach has been used both for testbench simulation and formal verification in order to catch internal module's mutations.
+
+`mcy` spits out a report:
+
+```
+Database contains 1860 cached results.
+Database contains 750 cached "FAIL" results for "test_eq".
+Database contains 360 cached "FAIL" results for "test_fm".
+Database contains 390 cached "FAIL" results for "test_sim".
+Database contains 360 cached "PASS" results for "test_sim".
+Tagged 750 mutations as "COVERED".
+Tagged 360 mutations as "FMONLY".
+```
+
 ## Usage
 
 1.  **Instantiate the module:**
