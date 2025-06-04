@@ -1,8 +1,10 @@
 // =============================================================================
-// File        : Equivalence Check for wbDPBRAM.v mutations
-// Author      : @fjpolo
-// email       : fjpolo@gmail.com
-// Description : <Brief description of the module or file>
+// File        : miter.v
+// Description : Miter module for formal equivalence checking of wbDPBRAM.
+//               Compares two instances of wbDPBRAM (reference and UUT)
+//               by feeding them identical inputs and asserting that their
+//               outputs (specifically o_doutB) are always identical.
+//               This version is optimized for formal verification tools like Yosys.
 // License     : MIT License
 //
 // Copyright (c) 2025 | @fjpolo
@@ -29,51 +31,77 @@
 `default_nettype none
 `timescale 1ps/1ps
 
-module miter (
-    input   wire    [0:0]   i_clk,
-    input   wire    [0:0]   i_reset_n,
-    input   wire    [7:0]   i_data,
-    output  reg     [7:0]   o_data
+module miter #(
+  parameter DATA_WIDTH = 32,
+  parameter ADDR_WIDTH = 10,
+  parameter MEM_DEPTH  = (1 << ADDR_WIDTH) // Calculate memory depth from address width
+) (
+    input   wire  [0:0]               i_clk,
+    // Common inputs for Port A (fed to both ref and uut)
+    input   wire  [0:0]               i_enA,
+    input   wire  [0:0]               i_weA,
+    input   wire  [(ADDR_WIDTH-1):0]  i_addrA,
+    input   wire  [(DATA_WIDTH-1):0]  i_dinA,
+    // Common inputs for Port B (fed to both ref and uut)
+    input   wire  [0:0]               i_enB,
+    input   wire  [(ADDR_WIDTH-1):0]  i_addrB,
+    // Output indicating equivalence (1'b1 = equivalent, 1'b0 = not equivalent)
+    output  wire  [0:0]               o_equal
 );
 
-    // Reference signals
-    wire    [7:0]   i_data_ref;
-    wire    [7:0]   o_data_ref;
+    // Internal wires for outputs from reference and UUT instances
+    wire [DATA_WIDTH-1:0] o_doutB_ref;
+    wire [DATA_WIDTH-1:0] o_doutB_uut;
 
-    // DUT signals
-    wire    [7:0]   i_data_uut;
-    wire    [7:0]   o_data_uut;
-
-    // Instantiate the reference
-    wbDPBRAM ref(
-        .i_clk(i_clk),
-        .i_reset_n(i_reset_n),
-        .i_data(i_data_ref),
-        .o_data(o_data_ref),
-        .mutsel(1'b0)
+    // Instantiate the reference wbDPBRAM module
+    // All inputs to the reference are directly from the miter's common inputs.
+    wbDPBRAM ref (
+        .i_clk    (i_clk),
+        .i_enA    (i_enA),
+        .i_weA    (i_weA),
+        .i_addrA  (i_addrA),
+        .i_dinA   (i_dinA),
+        .i_enB    (i_enB),
+        .i_addrB  (i_addrB),
+        .o_doutB  (o_doutB_ref)
     );
 
-    // Instantiate the UUT
-    wbDPBRAM uut(
-        .i_clk(i_clk),
-        .i_reset_n(i_reset_n),
-        .i_data(i_data_uut),
-        .o_data(o_data_uut),
-        .mutsel(1'b1)
+    // Instantiate the Unit Under Test (UUT) wbDPBRAM module
+    // All inputs to the UUT are also directly from the miter's common inputs.
+    wbDPBRAM uut (
+        .i_clk    (i_clk),
+        .i_enA    (i_enA),
+        .i_weA    (i_weA),
+        .i_addrA  (i_addrA),
+        .i_dinA   (i_dinA),
+        .i_enB    (i_enB),
+        .i_addrB  (i_addrB),
+        .o_doutB  (o_doutB_uut)
     );
 
-    // Assumptions
-    always @(*) begin
-        assume(i_data == i_data_ref == i_data_ref);
+    // Equivalence check logic:
+    // The 'o_equal' output is high if the outputs from Port B of both instances
+    // are identical, but only when Port B is enabled (i_enB is high).
+    // If Port B is not enabled, we consider them equivalent (as their outputs
+    // might be undefined or hold previous values, and we don't care about their
+    // exact match in that state for this check).
+    assign o_equal = (i_enB == 1'b1) ? (o_doutB_ref == o_doutB_uut) : 1'b1;
+
+    // Formal verification assertion (for tools like Yosys/SymbiYosys):
+    // This 'assert' statement formally states that whenever Port B is enabled,
+    // the output data from the reference and the UUT must be identical.
+    // If this condition ever becomes false during formal verification,
+    // the tool will report a non-equivalence.
+    always @(posedge i_clk) begin
+        if (i_enB) begin // Only assert when Port B is actively reading
+            assert(o_doutB_ref == o_doutB_uut); // Removed 'else $error' for formal tool compatibility
+        end
     end
 
-    // // Assertions
-    // always @(posedge i_clk) begin
-    //     if(!$past(i_reset_n))
-    //         assert(o_data_ref == o_data_dut);
-    // end
-
-    // always @(*)
-    //     assert(o_data_ref == o_data_dut);
+    // Note: For a comprehensive formal verification, you might also add 'assume'
+    // statements to specify valid input sequences or constraints (e.g., no
+    // simultaneous writes to the same address from different ports if that's
+    // a design constraint for your wbDPBRAM). However, for basic equivalence
+    // checking, feeding identical inputs and asserting output equality is key.
 
 endmodule

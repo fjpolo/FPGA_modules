@@ -29,19 +29,33 @@
 `default_nettype none
 `timescale 1ps/1ps
 
-module testbench (
-    input   wire    [0:0]   i_clk,
-    input   wire    [0:0]   i_reset_n,
-    input   wire    [7:0]   i_data,
-    output  reg     [7:0]   o_data
-);
+  parameter DATA_WIDTH = 32;
+  parameter ADDR_WIDTH = 10;
+  parameter MEM_DEPTH  = (1 << ADDR_WIDTH);// Calculate memory depth from address width
+  
+module testbench(
+    input   wire  [0:0]               i_clk,
+    // Port A
+    input   wire  [0:0]               i_enA,
+    input   wire  [0:0]               i_weA,
+    input   wire  [(ADDR_WIDTH-1):0]  i_addrA,
+    input   reg   [(DATA_WIDTH-1):0]  i_dinA,
+    // Port B
+    input   wire  [0:0]               i_enB,
+    input   wire  [(ADDR_WIDTH-1):0]  i_addrB,
+    output  reg   [(DATA_WIDTH-1):0]  o_doutB
+    );
     // Instantiate the dut
-    wbDPBRAM ref(
-        .i_clk(i_clk),
-        .i_reset_n(i_reset_n),
-        .i_data(i_data),
-        .o_data(o_data)
-        );
+    wbDPBRAM ref (
+        .i_clk    (i_clk),
+        .i_enA    (i_enA),
+        .i_weA    (i_weA),
+        .i_addrA  (i_addrA),
+        .i_dinA   (i_dinA),
+        .i_enB    (i_enB),
+        .i_addrB  (i_addrB),
+        .o_doutB  (o_doutB)
+    );
 
     ////////////////////////////////////////////////////
 	//

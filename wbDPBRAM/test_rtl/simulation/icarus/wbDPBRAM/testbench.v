@@ -2,7 +2,8 @@
 // File        : testbench.v for wbDPBRAM.v
 // Author      : @fjpolo
 // email       : fjpolo@gmail.com
-// Description : <Brief description of the module or file>
+// Description : Self-checking testbench for the wbDPBRAM module,
+//               including a random write/read test.
 // License     : MIT License
 //
 // Copyright (c) 2025 | @fjpolo
@@ -28,15 +29,15 @@
 `default_nettype none
 `timescale 1ps/1ps
 
-module testbench;
+// Parameters are now part of the testbench module definition
+module testbench ();
+
+  localparam DATA_WIDTH = 32;
+  localparam ADDR_WIDTH = 10;
+  localparam MEM_DEPTH  = (1 << ADDR_WIDTH); // 2^10 = 1024 locations
 
   localparam HALF_CLOCK = 5;
   localparam FULL_CLOCK = 2 * HALF_CLOCK;
-
-  // Parameters for the wbDPBRAM module instance
-  parameter DATA_WIDTH = 32;
-  parameter ADDR_WIDTH = 10;
-  parameter MEM_DEPTH  = (1 << ADDR_WIDTH); // 2^10 = 1024 locations
 
   // Testbench signals (wires and regs to connect to the DUT)
   reg                   clk;
@@ -58,6 +59,18 @@ module testbench;
 
   // Instantiate the Device Under Test (DUT) - wbDPBRAM
   // Ensure wbDPBRAM.v is in the same directory or accessible via your simulator's paths.
+`ifdef MCY
+  wbDPBRAM dut (
+    .i_clk    (clk),
+    .i_enA    (i_enA),
+    .i_weA    (i_weA),
+    .i_addrA  (i_addrA),
+    .i_dinA   (i_dinA),
+    .i_enB    (i_enB),
+    .i_addrB  (i_addrB),
+    .o_doutB  (o_doutB)
+  );
+  `else
   wbDPBRAM #(
     .DATA_WIDTH (DATA_WIDTH),
     .ADDR_WIDTH (ADDR_WIDTH),
@@ -72,9 +85,10 @@ module testbench;
     .i_addrB  (i_addrB),
     .o_doutB  (o_doutB)
   );
+`endif
 
-    reg [(ADDR_WIDTH)-1:0] random_addr;
-    reg [(DATA_WIDTH-1):0] random_data;
+  reg [ADDR_WIDTH-1:0] random_addr;
+  reg [DATA_WIDTH-1:0] random_data;
 
   // Clock generation
   initial begin
