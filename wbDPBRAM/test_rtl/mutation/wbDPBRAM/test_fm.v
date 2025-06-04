@@ -82,10 +82,6 @@ module testbench(
 	always @(posedge i_clk)
 		if ((i_enA)&&(i_weA)&&(i_addrA == f_addr))
 			f_expected_data_at_f_addr <= i_dinA;
-	// // Verify write
-	// always @(posedge i_clk)
-	// 	if((f_past_valid)&&(($past(f_past_valid))&&($past(i_enA))&&($past(i_weA))&&($past(i_addrA) == $past(f_addr))))
-	// 		assert(ram[$past(f_addr)] == f_expected_data_at_f_addr);
 
 	/* Every write to RAM followed by a read to the same address must hold */
 	// Verify read after write
