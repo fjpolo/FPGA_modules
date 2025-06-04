@@ -25,22 +25,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // =============================================================================
-
 `default_nettype none
 `timescale 1ps/1ps
 
-module wbTDPBRAM(
-    input   wire    [0:0]   i_clk,
-    input   wire    [0:0]   i_reset_n,
-    input   wire    [7:0]   i_data,
-    output  reg     [7:0]   o_data
-);
+module wbTDPBRAM#(
+                    parameter DATA_WIDTH = 32,
+                    parameter ADDR_WIDTH = 10,
+                    parameter MEM_DEPTH  = (1 << ADDR_WIDTH) // Calculate memory depth from address width
+                 )(
+                    input   wire    [0:0]               i_clkA,
+                    input   wire    [0:0]               i_clkB,
+                    input   wire    [0:0]               i_enA,
+                    input   wire    [0:0]               i_enB,
+                    input   wire    [0:0]               i_weA,
+                    input   wire    [0:0]               i_weB,
+                    input   wire    [(ADDR_WIDTH-1):0]  i_addrA,
+                    input   wire    [(ADDR_WIDTH-1):0]  i_addrB,
+                    input   wire    [(DATA_WIDTH-1):0]  i_dinA,
+                    input   wire    [(DATA_WIDTH-1):0]  i_dinB,
+                    output  reg     [(DATA_WIDTH-1):0]  o_doutA,
+                    output  reg     [(DATA_WIDTH-1):0]  o_doutB
+                );
+reg [(DATA_WIDTH-1):0] ram [(MEM_DEPTH-1):0];
 
-always @(posedge i_clk) begin
-    if(!i_reset_n) begin
-        o_data <= 8'h00;
-    end else begin
-        o_data <= i_data;
+always @(posedge i_clkA)begin
+    if (i_enA) begin
+        if (i_weA)
+            ram[i_addrA] <= i_dinA;
+        o_doutA <= ram[i_addrA];
+    end
+end
+
+always @(posedge i_clkB) begin
+    if (i_enB) begin
+        if (i_weB)
+            ram[i_addrB] <= i_dinB;
+        o_doutB <= ram[i_addrB];
     end
 end
 
