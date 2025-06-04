@@ -48,18 +48,33 @@ module wbTDPBRAM#(
                 );
 reg [(DATA_WIDTH-1):0] ram [(MEM_DEPTH-1):0];
 
+
+// Port A - Write
 always @(posedge i_clkA) begin
     if (i_enA) begin
         if (i_weA)
             ram[i_addrA] <= i_dinA;
+    end
+end
+
+// Port A - Read
+always @(posedge i_clkA) begin
+    if (i_enA) begin
         o_doutA <= ram[i_addrA];
     end
 end
 
+// Port B - Write
 always @(posedge i_clkB) begin
     if (i_enB) begin
         if (i_weB)
             ram[i_addrB] <= i_dinB;
+    end
+end
+
+// Port B - Write
+always @(posedge i_clkB) begin
+    if (i_enB) begin
         o_doutB <= ram[i_addrB];
     end
 end
