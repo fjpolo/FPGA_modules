@@ -1,5 +1,5 @@
 [options]
-size 2508
+size 750
 tags COVERED UNCOVERED NOCHANGE EQGAP FMONLY
 
 [script]
