@@ -11,6 +11,7 @@ prf:    depth 8
 cvr:    mode cover
 cvr:    depth 64
 cvr:    append 20
+multiclock on
 
 
 [engines]

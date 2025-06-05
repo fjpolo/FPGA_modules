@@ -2,7 +2,7 @@
 // File        : wbTDPBRAM.v
 // Author      : @fjpolo
 // email       : fjpolo@gmail.com
-// Description : <Brief description of the module or file>
+// Description : True Dual Port Block RAM with Port A write priority on collision.
 // License     : MIT License
 //
 // Copyright (c) 2025 | @fjpolo
@@ -31,7 +31,7 @@
 module wbTDPBRAM#(
                     parameter DATA_WIDTH = 32,
                     parameter ADDR_WIDTH = 10,
-                    parameter MEM_DEPTH  = (1 << ADDR_WIDTH) // Calculate memory depth from address width
+                    parameter MEM_DEPTH   = (1 << ADDR_WIDTH) // Calculate memory depth from address width
                  )(
                     // Port A
                     input   wire    [0:0]               i_clkA,
@@ -48,14 +48,19 @@ module wbTDPBRAM#(
                     input   wire    [(DATA_WIDTH-1):0]  i_dinB,
                     output  reg     [(DATA_WIDTH-1):0]  o_doutB
                 );
+
+// Internal memory array
 reg [(DATA_WIDTH-1):0] ram [(MEM_DEPTH-1):0];
 
+// Define a wire to indicate if Port A is actively trying to write to the same address as Port B
+wire port_a_writing_to_same_address = ((i_enA)&&(i_weA)&&(i_addrA == i_addrB));
 
 // Port A - Write
 always @(posedge i_clkA) begin
     if (i_enA) begin
-        if (i_weA)
+        if (i_weA) begin
             ram[i_addrA] <= i_dinA;
+        end
     end
 end
 
@@ -68,13 +73,14 @@ end
 
 // Port B - Write
 always @(posedge i_clkB) begin
-    if (i_enB) begin
-        if (i_weB)
+    if (i_enB && i_weB) begin
+        if (!port_a_writing_to_same_address) begin // If Port A is NOT writing to this address, Port B can write
             ram[i_addrB] <= i_dinB;
+        end
     end
 end
 
-// Port B - Write
+// Port B - Read
 always @(posedge i_clkB) begin
     if (i_enB) begin
         o_doutB <= ram[i_addrB];

@@ -34,6 +34,9 @@
 `define	ASSUME	assert
 `endif
 
+	/* Global clock */
+	(* gclk *) wire global_clk;
+
     ////////////////////////////////////////////////////
 	//
 	// f_past_valid register
@@ -41,10 +44,8 @@
 	////////////////////////////////////////////////////
 	reg	f_past_valid;
 	initial	f_past_valid = 0;
-	always @(posedge i_clk)
+	always @(posedge global_clk)
 		f_past_valid <= 1'b1;
-
-
 
     ////////////////////////////////////////////////////
 	//
