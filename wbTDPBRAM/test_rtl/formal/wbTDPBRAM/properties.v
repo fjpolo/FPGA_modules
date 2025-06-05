@@ -124,17 +124,13 @@
 
     // Cover a Port A write
     always @(posedge clk) begin
-        `ifdef SBY
         cover(((i_enA && i_weA) && (i_addrA == f_tracked_addr)));
-        `endif
     end
 
     // Cover a Port B write attempt where Port A has priority
     always @(posedge clk) begin
-        `ifdef SBY
         cover(((i_enB && i_weB) && (i_addrB == f_tracked_addr)) &&
               ((i_enA && i_weA) && (i_addrA == f_tracked_addr)));
-        `endif
     end
 
 `endif
