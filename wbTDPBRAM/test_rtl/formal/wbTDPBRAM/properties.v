@@ -101,25 +101,13 @@
             ($past(i_enA) && $past(i_weA) && ($past(i_addrA) == f_tracked_addr))) begin // AND Port A also wants to write to same address
             // In this case, Port B's write should NOT happen, so ram[f_tracked_addr] should NOT be i_dinB from Port B
             // It should be i_dinA from Port A.
-            `ASSERT(ram[f_tracked_addr] == f_expected_data_at_tracked_addr); // Assert it's Port A's data
+            assert(ram[f_tracked_addr] == f_expected_data_at_tracked_addr); // Assert it's Port A's data
             // This second assert ensures that if dinB was different from dinA, dinB was NOT written.
             // This is a stronger guarantee for priority.
-            `ASSERT(ram[f_tracked_addr] != $past(i_dinB) || (f_expected_data_at_tracked_addr == $past(i_dinB)));
+            assert(ram[f_tracked_addr] != $past(i_dinB) || (f_expected_data_at_tracked_addr == $past(i_dinB)));
             // The above means: Either ram[f_tracked_addr] is not dinB, OR dinB happened to be the same as dinA anyway.
         end
     end
-
-
-    // // /* Every write to RAM followed by a read to the same address must hold */
-    // // // Verify read after write (commented out, keep commented for now)
-    // // always @(posedge clk) // Use global 'clk'
-    // //  if(
-    // //      (f_past_valid)&&($past(f_past_valid))&&($past(f_past_valid, 2))
-    // //      &&(!$past(i_enA)&&(!$past(i_weA)))
-    // //      &&($past(i_enB))&&($past(f_addr,2) == $past(f_addr))&&($past(i_addrB) == $past(f_addr))
-    // //  ) begin
-    // //      assert(o_doutB == $past(ram[f_addr]));
-    // //  end
 
 
     ////////////////////////////////////////////////////
