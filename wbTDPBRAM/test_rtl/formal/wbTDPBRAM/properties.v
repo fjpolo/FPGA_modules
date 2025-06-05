@@ -2,7 +2,7 @@
 // File        : Formal Properties for wbTDPBRAM.v
 // Author      : @fjpolo
 // email       : fjpolo@gmail.com
-// Description : <Brief description of the module or file>
+// Description : Formal properties for True Dual Port Block RAM with Port A write priority.
 // License     : MIT License
 //
 // Copyright (c) 2025 | @fjpolo
@@ -25,57 +25,128 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // =============================================================================
-`ifdef	FORMAL
+`ifdef  FORMAL
 // Change direction of assumes
-`define	ASSERT	assert
-`ifdef	wbTDPBRAM
-`define	ASSUME	assume
+`define ASSERT  assert
+`ifdef  wbTDPBRAM // This should match the top module name (DUT)
+`define ASSUME  assume
 `else
-`define	ASSUME	assert
+`define ASSUME  assert
 `endif
 
-	/* Global clock */
-	(* gclk *) wire global_clk;
+    /* Global clock for formal verification */
+    (* gclk *) reg clk; // Use 'clk' as the global clock
+	always @(posedge clk) begin
+		assume(i_clkA == !$past(i_clkA));
+		assume(i_clkB == !$past(i_clkB));
+	end
+	always @(*) assume(i_clkA == i_clkB); 
+
 
     ////////////////////////////////////////////////////
-	//
-	// f_past_valid register
-	//
-	////////////////////////////////////////////////////
-	reg	f_past_valid;
-	initial	f_past_valid = 0;
-	always @(posedge global_clk)
-		f_past_valid <= 1'b1;
+    //
+    // f_past_valid register
+    //
+    ////////////////////////////////////////////////////
+    reg f_past_valid;
+    initial f_past_valid = 0;
+    always @(posedge i_clkA)
+        f_past_valid <= 1'b1;
 
     ////////////////////////////////////////////////////
-	//
-	// Reset
-	//
-	////////////////////////////////////////////////////
+    //
+    // Reset
+    //
+    ////////////////////////////////////////////////////
 
     ////////////////////////////////////////////////////
-	//
-	// BMC
-	//
-	////////////////////////////////////////////////////
+    //
+    // BMC
+    //
+    ////////////////////////////////////////////////////
+
+    /* Port A write (priority) followed by read from port A*/
+    // Define a specific address to track for properties
+    (* anyconst *)  wire    [(ADDR_WIDTH-1):0]  f_tracked_addr;
+
+    // Register to store the data that should be written to f_tracked_addr by Port A
+    reg [(DATA_WIDTH)-1:0]  f_expected_data_at_tracked_addr;
+    always @(posedge i_clkA) begin
+        // If Port A attempts to write to f_tracked_addr
+        if ((i_enA)&&(i_weA)&&(i_addrA == f_tracked_addr)) begin
+            f_expected_data_at_tracked_addr <= i_dinA;
+        end
+    end
+
+    // Assertion: If Port A successfully wrote to f_tracked_addr in the previous cycle,
+    // then the RAM content at f_tracked_addr must match the expected data in the current cycle.
+    always @(posedge i_clkA) begin // Use global 'clk'
+        if (
+				(f_past_valid)&&
+				($past(f_past_valid))&&
+				(($past(i_enA))&&
+				($past(i_weA))&&
+				($past(i_addrA) == f_tracked_addr))
+			) begin
+            assert(ram[f_tracked_addr] == f_expected_data_at_tracked_addr);
+        end
+    end
+
+    // --- NEW PROPERTY: Port B write priority check ---
+    // If Port B attempts to write to f_tracked_addr, but Port A has priority (is writing to same address),
+    // then Port B's write should be suppressed.
+    always @(posedge i_clkB) begin // Use global 'clk'
+        if (f_past_valid &&
+            ($past(i_enB) && $past(i_weB) && ($past(i_addrB) == f_tracked_addr)) && // Port B wants to write to f_tracked_addr
+            ($past(i_enA) && $past(i_weA) && ($past(i_addrA) == f_tracked_addr))) begin // AND Port A also wants to write to same address
+            // In this case, Port B's write should NOT happen, so ram[f_tracked_addr] should NOT be i_dinB from Port B
+            // It should be i_dinA from Port A.
+            `ASSERT(ram[f_tracked_addr] == f_expected_data_at_tracked_addr); // Assert it's Port A's data
+            // This second assert ensures that if dinB was different from dinA, dinB was NOT written.
+            // This is a stronger guarantee for priority.
+            `ASSERT(ram[f_tracked_addr] != $past(i_dinB) || (f_expected_data_at_tracked_addr == $past(i_dinB)));
+            // The above means: Either ram[f_tracked_addr] is not dinB, OR dinB happened to be the same as dinA anyway.
+        end
+    end
+
+
+    // // /* Every write to RAM followed by a read to the same address must hold */
+    // // // Verify read after write (commented out, keep commented for now)
+    // // always @(posedge clk) // Use global 'clk'
+    // //  if(
+    // //      (f_past_valid)&&($past(f_past_valid))&&($past(f_past_valid, 2))
+    // //      &&(!$past(i_enA)&&(!$past(i_weA)))
+    // //      &&($past(i_enB))&&($past(f_addr,2) == $past(f_addr))&&($past(i_addrB) == $past(f_addr))
+    // //  ) begin
+    // //      assert(o_doutB == $past(ram[f_addr]));
+    // //  end
+
 
     ////////////////////////////////////////////////////
-	//
-	// Contract
-	//
-	////////////////////////////////////////////////////   
+    //
+    // Induction
+    //
+    ////////////////////////////////////////////////////
 
     ////////////////////////////////////////////////////
-	//
-	// Induction
-	//
-	////////////////////////////////////////////////////
-    
-	////////////////////////////////////////////////////
-	//
-	// Cover
-	//
-	////////////////////////////////////////////////////     
-           
+    //
+    // Cover
+    //
+    ////////////////////////////////////////////////////
+
+    // Cover a Port A write
+    always @(posedge clk) begin
+        `ifdef SBY
+        cover(((i_enA && i_weA) && (i_addrA == f_tracked_addr)));
+        `endif
+    end
+
+    // Cover a Port B write attempt where Port A has priority
+    always @(posedge clk) begin
+        `ifdef SBY
+        cover(((i_enB && i_weB) && (i_addrB == f_tracked_addr)) &&
+              ((i_enA && i_weA) && (i_addrA == f_tracked_addr)));
+        `endif
+    end
+
 `endif
-
