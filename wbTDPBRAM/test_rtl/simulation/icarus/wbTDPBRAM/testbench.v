@@ -278,11 +278,50 @@ module testbench;
             #(FULL_CLK);
             i_enB <= 1'b0; // De-assert enable after read
         end
-        $display("Time %0t: Test 3: All Port A Writes -> Port B Reads completed successfully for all addresses.", $time);
+        $display("Time %0t: Test 5: All Port A Writes -> Port B Reads completed successfully for all addresses.", $time);
         $display("---------------------------------------");
 
-        // Test 6: If Port A and Port B want to write to the same address at the same time, Port A has priority
-        $display("Time %0t: Test 6: Writing 0xdeadbeef to addr 0x006 via Port A", $time);
+        // Test 6: Loop through all addresses: Write to Port B, then read from Port A
+        $display("Time %0t: Test 6: Iterating through all addresses (0 to %0d). Write Port B, Read Port A.", $time, MEM_DEPTH - 1);
+        for (addr = 0; addr < MEM_DEPTH; addr = addr + 1) begin
+            test_data = {32'hAAAA_0000 | addr}; // Generate unique test data for each address
+
+            // Write to Port B
+            #(FULL_CLK);
+            i_enB <= 1'b1;
+            i_weB <= 1'b1;
+            i_addrB <= addr;
+            i_dinB <= test_data;
+
+            #(FULL_CLK);
+            i_weB <= 1'b0;
+            i_enB <= 1'b0;
+            
+            // Read from Port A
+            #(FULL_CLK);
+            i_enA <= 1'b1;
+            i_weA <= 1'b0; // Ensure it's a read operation
+            i_addrA <= addr;
+
+            #(FULL_CLK);
+            // Based on previous instructions: "check the output only when o_ce is high, and account for the fact that o_ce toggles."
+            // Since `o_ce` is not an explicit output, we assume `o_doutA` is valid after `i_enA` is high for one clock cycle.
+            if (o_doutA !== test_data) begin
+                $display("Time %0t: FAIL: Port A Write -> Port A Read at addr 0x%x failed. Read 0x%x instead of expected 0x%x", $time, addr, o_doutA, test_data);
+                $finish; // Terminate simulation on first failure
+            end else begin
+                // $display("Time %0t: PASS: Port A Write -> Port A Read at addr 0x%x successful. Read 0x%x", $time, addr, o_doutA);
+            end
+
+            #(FULL_CLK);
+            i_enA <= 1'b0; // De-assert enable after read
+        end
+        $display("Time %0t: Test 6: All Port A Writes -> Port B Reads completed successfully for all addresses.", $time);
+        $display("---------------------------------------");
+
+
+        // Test 7: If Port A and Port B want to write to the same address at the same time, Port A has priority
+        $display("Time %0t: Test 7: Writing 0xdeadbeef to addr 0x006 via Port A", $time);
         $display("                    Writing 0xdeadb00b to addr 0x006 via Port B");
         #(FULL_CLK);
         i_enA <= 1'b1;
@@ -330,7 +369,7 @@ module testbench;
 
     // Monitor for errors or timeout
     initial begin
-        #(10000 * FULL_CLK); // Increased timeout to allow for more tests
+        #(20000 * FULL_CLK); // Increased timeout to allow for more tests
         $display("Time %0t: ERROR: Simulation timed out.", $time);
         $finish;
     end
