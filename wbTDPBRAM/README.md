@@ -44,7 +44,7 @@ This Verilog module implements a **True Dual Port Block RAM** with **Port A writ
 
     ```verilog
     // Example instantiation in another module
-    my_design #(
+    wbTDPBRAM #(
         .DATA_WIDTH(32), // e.g., 32-bit data
         .ADDR_WIDTH(10)  // e.g., 10-bit address (1024 locations)
     ) your_bram_instance (
