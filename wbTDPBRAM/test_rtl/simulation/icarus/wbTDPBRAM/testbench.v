@@ -80,6 +80,24 @@ module testbench;
     // MEM_DEPTH is typically also a parameter to the BRAM module
     // If wbTDPBRAM also has a MEM_DEPTH parameter, you should pass it.
     // For now, only DATA_WIDTH and ADDR_WIDTH are passed as per your instantiation.
+`ifdef MCY
+    wbTDPBRAM tdpbram(
+                // Port A
+                .i_clkA(i_clkA),
+                .i_enA(i_enA),
+                .i_weA(i_weA),
+                .i_addrA(i_addrA),
+                .i_dinA(i_dinA),
+                .o_doutA(o_doutA),
+                // Port B
+                .i_clkB(i_clkB),
+                .i_enB(i_enB),
+                .i_weB(i_weB),
+                .i_addrB(i_addrB),
+                .i_dinB(i_dinB),
+                .o_doutB(o_doutB)
+                );
+`else
     wbTDPBRAM #(
                 .DATA_WIDTH(DATA_WIDTH),
                 .ADDR_WIDTH(ADDR_WIDTH)
@@ -99,6 +117,7 @@ module testbench;
                 .i_dinB(i_dinB),
                 .o_doutB(o_doutB)
                 );
+`endif
 
     // Test sequence
     initial begin

@@ -29,51 +29,97 @@
 `default_nettype none
 `timescale 1ps/1ps
 
-module miter (
-    input   wire    [0:0]   i_clk,
-    input   wire    [0:0]   i_reset_n,
-    input   wire    [7:0]   i_data,
-    output  reg     [7:0]   o_data
-);
+module miter#(
+                    parameter DATA_WIDTH = 32,
+                    parameter ADDR_WIDTH = 10,
+                    parameter MEM_DEPTH   = (1 << ADDR_WIDTH) // Calculate memory depth from address width
+                 )(
+                    // Port A
+                    input   wire    [0:0]               i_clkA,
+                    input   wire    [0:0]               i_enA,
+                    input   wire    [0:0]               i_weA,
+                    input   wire    [(ADDR_WIDTH-1):0]  i_addrA,
+                    input   wire    [(DATA_WIDTH-1):0]  i_dinA,
+                    output  reg     [(DATA_WIDTH-1):0]  o_doutA,
+                    // Port B
+                    input   wire    [0:0]               i_clkB,
+                    input   wire    [0:0]               i_enB,
+                    input   wire    [0:0]               i_weB,
+                    input   wire    [(ADDR_WIDTH-1):0]  i_addrB,
+                    input   wire    [(DATA_WIDTH-1):0]  i_dinB,
+                    output  reg     [(DATA_WIDTH-1):0]  o_doutB
+                );
 
     // Reference signals
-    wire    [7:0]   i_data_ref;
-    wire    [7:0]   o_data_ref;
+    wire    [(DATA_WIDTH-1):0]   i_dinA_ref;
+    wire    [(DATA_WIDTH-1):0]   i_dinB_ref;
+    wire    [(DATA_WIDTH-1):0]   o_doutA_ref;
+    wire    [(DATA_WIDTH-1):0]   o_doutB_ref;
 
     // DUT signals
-    wire    [7:0]   i_data_uut;
-    wire    [7:0]   o_data_uut;
+    wire    [(DATA_WIDTH-1):0]   i_dinA_uut;
+    wire    [(DATA_WIDTH-1):0]   i_dinB_uut;
+    wire    [(DATA_WIDTH-1):0]   o_doutA_uut;
+    wire    [(DATA_WIDTH-1):0]   o_doutB_uut;
 
     // Instantiate the reference
     wbTDPBRAM ref(
-        .i_clk(i_clk),
-        .i_reset_n(i_reset_n),
-        .i_data(i_data_ref),
-        .o_data(o_data_ref),
+        // Port A
+        .i_clkA(i_clkA),
+        .i_enA(i_enA),
+        .i_weA(i_weA),
+        .i_addrA(i_addrA),
+        .i_dinA(i_dinA),
+        .o_doutA(o_doutA_ref),
+        // Port B
+        .i_clkB(i_clkB),
+        .i_enB(i_enB),
+        .i_weB(i_weB),
+        .i_addrB(i_addrB),
+        .i_dinB(i_dinB),
+        .o_doutB(o_doutB_ref),
         .mutsel(1'b0)
     );
 
     // Instantiate the UUT
     wbTDPBRAM uut(
-        .i_clk(i_clk),
-        .i_reset_n(i_reset_n),
-        .i_data(i_data_uut),
-        .o_data(o_data_uut),
+        // Port A
+        .i_clkA(i_clkA),
+        .i_enA(i_enA),
+        .i_weA(i_weA),
+        .i_addrA(i_addrA),
+        .i_dinA(i_dinA),
+        .o_doutA(o_doutA_uut),
+        // Port B
+        .i_clkB(i_clkB),
+        .i_enB(i_enB),
+        .i_weB(i_weB),
+        .i_addrB(i_addrB),
+        .i_dinB(i_dinB),
+        .o_doutB(o_doutB_uut),
         .mutsel(1'b1)
     );
 
     // Assumptions
+    // Assume same clock domain
+    always @(*)
+        assume(i_clkA == i_clkB);
+    // Assume input data stays consistent
     always @(*) begin
-        assume(i_data == i_data_ref == i_data_ref);
+        assume(i_dinA == i_dinA_ref == i_dinA_ref);
+        assume(i_dinB == i_dinB_ref == i_dinB_ref);
     end
 
-    // // Assertions
-    // always @(posedge i_clk) begin
-    //     if(!$past(i_reset_n))
-    //         assert(o_data_ref == o_data_dut);
-    // end
 
-    // always @(*)
-    //     assert(o_data_ref == o_data_dut);
+    // Assertions
+    always @(posedge i_clkA)
+        assert(o_doutA_ref == o_doutA_uut);
+    always @(posedge i_clkB)
+        assert(o_doutB_ref == o_doutB_uut);
+
+    always @(*)
+        assert(o_doutA_ref == o_doutA_uut);
+    always @(*)
+        assert(o_doutB_ref == o_doutB_uut);
 
 endmodule
