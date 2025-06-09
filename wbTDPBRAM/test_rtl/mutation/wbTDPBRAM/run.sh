@@ -11,21 +11,12 @@
     # Copy original rtl here
     cp ${PWD}/../../../rtl/wbTDPBRAM.v .
 
-    # Append `define MCY after `timescale 1ps/1ps
-    sed '/\`timescale 1ps\/1ps/a \
-    \`define MCY' wbTDPBRAM.v > wbTDPBRAM_temp.v
-
-    #replace the orginal testbench file with the temp file.
+    # Append `define MCY after `timescale 1ps/1ps to wbTDPBRAM.v using awk
+    awk '1;/`timescale 1ps\/1ps/{print "`define MCY"}' wbTDPBRAM.v > wbTDPBRAM_temp.v
     mv wbTDPBRAM_temp.v wbTDPBRAM.v
 
-    # Copy wbTDPBRAM here
-    cp ${PWD}/../../simulation/icarus/wbTDPBRAM/testbench.v .
-
-    # Append `define MCY after `timescale 1ps/1ps
-    sed '/\`timescale 1ps\/1ps/a \
-    \`define MCY' testbench.v > testbench_temp.v
-
-    #replace the orginal testbench file with the temp file.
+    # Append `define MCY after `timescale 1ps/1ps to testbench.v using awk
+    awk '1;/`timescale 1ps\/1ps/{print "`define MCY"}' testbench.v > testbench_temp.v
     mv testbench_temp.v testbench.v
 
     # Move create scripts to $SCRIPTS
