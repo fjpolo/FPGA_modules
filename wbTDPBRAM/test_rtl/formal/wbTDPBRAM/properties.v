@@ -96,9 +96,11 @@
     // If Port B attempts to write to f_tracked_addr, but Port A has priority (is writing to same address),
     // then Port B's write should be suppressed.
     always @(posedge i_clkB) begin // Use global 'clk'
-        if (f_past_valid &&
-            ($past(i_enB) && $past(i_weB) && ($past(i_addrB) == f_tracked_addr)) && // Port B wants to write to f_tracked_addr
-            ($past(i_enA) && $past(i_weA) && ($past(i_addrA) == f_tracked_addr))) begin // AND Port A also wants to write to same address
+        if (
+            (f_past_valid) &&
+            (($past(i_enB))&&($past(i_weB))&&($past(i_addrB)) == (f_tracked_addr))&&    // Port B wants to write to f_tracked_addr
+            (($past(i_enA))&&($past(i_weA))&&($past(i_addrA)) == (f_tracked_addr))      // AND Port A also wants to write to same address
+           ) begin
             // In this case, Port B's write should NOT happen, so ram[f_tracked_addr] should NOT be i_dinB from Port B
             // It should be i_dinA from Port A.
             assert(ram[f_tracked_addr] == f_expected_data_at_tracked_addr); // Assert it's Port A's data
@@ -106,6 +108,27 @@
             // This is a stronger guarantee for priority.
             assert(ram[f_tracked_addr] != $past(i_dinB) || (f_expected_data_at_tracked_addr == $past(i_dinB)));
             // The above means: Either ram[f_tracked_addr] is not dinB, OR dinB happened to be the same as dinA anyway.
+        end
+    end
+
+    //  Read/Write Conflict - Port B reads Old Value ---
+    // If Port A is writing to an address, and Port B is reading from the *same* address
+    // in the *same clock cycle*, then Port B should read the value that was in RAM
+    // *before* Port A's write took effect (due to non-blocking assignments).
+    always @(posedge clk) begin // Clocked by global formal clock
+        if ((f_past_valid)&&
+            // Conditions must be met in the *current* cycle for the collision behavior.
+            // i_enA, i_weA, i_addrA, i_enB, i_addrB are inputs at the current cycle.
+            ($past(i_enA,2))&&(!$past(i_weA,2))&&($past(i_addrA,2) == f_tracked_addr)&&     // Issue a read in Port A @clk-2 
+            ($past(i_enB,2))&&(!$past(i_weB,2))&&($past(i_addrB,2) == f_tracked_addr)&&     // Issue a read in Port B @clk-2
+            ($past(o_doutA) != f_tracked_addr)&&($past(o_doutB) != f_tracked_addr)&&        // Check that expected data at address is different than what we will write @clk-1
+            ($past(i_enA))&&($past(i_weA))&&($past(i_addrA) == f_tracked_addr)&&            // Port A write expected data @clk-1 
+            ($past(i_enB))&&(!$past(i_weB))&&($past(i_addrB) == f_tracked_addr)             // Port B reads the address @clk-1
+           ) begin
+            // o_doutB should be the value of RAM from @clk-1, not @clk (written by port A)
+            assert(o_doutB == $past(ram[f_tracked_addr]));
+            // Also, assert that it's NOT the new data Port A is writing (unless they happen to be the same)
+            //assert(o_doutB != f_expected_data_at_tracked_addr);
         end
     end
 
